@@ -5,12 +5,12 @@ from dotenv import load_dotenv
 from hardcoded_reply import HardCodedReply
 from magic_8ball import Magic8Ball
 from brookly99_quotes import B99Quotes
-
+from chess import Chess
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 client = discord.Client()
 
-jiji_modules = [HardCodedReply(), Magic8Ball(), B99Quotes()]
+jiji_modules = [HardCodedReply(), Magic8Ball(), B99Quotes(), Chess()]
 
 @client.event
 async def on_ready():
