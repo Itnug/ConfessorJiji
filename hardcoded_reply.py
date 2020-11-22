@@ -11,13 +11,17 @@ class HardCodedReply(JijiModule):
     }
 
     def on_message(self, message):
-        token = message.content.lower().split()
-        
-        if token[0] != 'jiji':
-            return
-        
-        if token[1] in self.replies:
-            return self.replies[token[1]]
+        if type(message) == type(''):
+            return self.reply(message)
+        else:
+            token = message.content.lower().split()
+            if token[0] != 'jiji':
+                return
+            return self.reply(token[1])
+
+    def reply(self, q):
+        if q in self.replies:
+            return self.replies[q]
     
 if __name__ == '__main__':
     test_string = 'jiji  yin'
