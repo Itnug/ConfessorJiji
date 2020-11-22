@@ -52,6 +52,10 @@ def get_user_from_mention(mention: str):
         if mention.startswith('!'):
             mention = mention[1:]
 
+@bot.command(name='e')
+async def test(ctx):
+    print(ctx.__dir__())
+
 @bot.event
 async def on_ready():
     print(f'chessbot is online')
@@ -79,8 +83,11 @@ async def move(ctx, move):
     print(f'to play = {GAME.get_current_player()}')
     player = str(ctx.author.id)
     if GAME.is_valid_player(player):
-        await ctx.send(f'ok <@{player}>.')
-        GAME.toggle_player()
+        if GAME.is_valid_move(move):
+            await ctx.send(f'ok <@{player}>.')
+            GAME.toggle_player()
+        else:
+            await ctx.send(f'that is an illegal move. bruh...')
         await ctx.send(f'now it is <@{GAME.get_current_player()}>\'s turn')
     else:
         await ctx.send(f'invalid player. <@{ctx.author.id}> not same as <@{GAME.get_current_player()}>')
@@ -111,3 +118,9 @@ class Chess():
 
     def get_current_player(self):
         return self.black if self.to_play else self.white
+
+    def is_valid_move(self, move):
+        if re.match(notation, move):
+            return True
+        else:
+            return False
