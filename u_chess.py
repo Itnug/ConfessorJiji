@@ -42,9 +42,6 @@ def make_board():
     rows, cols = (8, 8)
     board = [[None]*cols]*rows
 
-def start_board(board):
-    
-
 def build_view(board):
     view = '\n'
     br = '+'+'---+'*8
