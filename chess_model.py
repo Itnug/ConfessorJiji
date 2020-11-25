@@ -1,58 +1,39 @@
 from collections import namedtuple
 
-Sprite = namedtuple('Sprite', ('name', 'id',  'view'))
+Sprite = namedtuple('Sprite', ('name', 'id', 'view'))
 sprites = [
-    Sprite('white_king', 11, '♔'),
-    Sprite('white_queen', 12, '♕'),
-    Sprite('white_rook', 13, '♖'),
-    Sprite('white_bishop', 14, '♗'),
-    Sprite('white_knight', 15, '♘'),
-    Sprite('white_pawn', 16, '♙'),
+    Sprite('white_king', 'wK', '♔'),
+    Sprite('white_queen', 'wQ', '♕'),
+    Sprite('white_rook', 'wR', '♖'),
+    Sprite('white_bishop', 'wB', '♗'),
+    Sprite('white_knight', 'wN', '♘'),
+    Sprite('white_pawn', 'w', '♙'),
 
-    Sprite('black_king', 21, '♚'),
-    Sprite('black_queen', 22, '♛'),
-    Sprite('black_rook', 23, '♜'),
-    Sprite('black_bishop', 24, '♝'),
-    Sprite('black_knight', 25, '♞'),
-    Sprite('black_pawn', 26, '♟︎'),
+    Sprite('black_king', 'bK', '♚'),
+    Sprite('black_queen', 'bQ', '♛'),
+    Sprite('black_rook', 'bR', '♜'),
+    Sprite('black_bishop', 'bB', '♝'),
+    Sprite('black_knight', 'bN', '♞'),
+    Sprite('black_pawn', 'b', '♟︎'),
 
-    Sprite('h_break', 101, '〰'),
-    Sprite('empty_space', 102, '　') #unicode space - extra wide
+    Sprite('h_break', '-', '〰'),
+    Sprite('empty_space', ' ', '　') #unicode space - extra wide
 ]
 
 sprites_memo = {}
-def sprite_by_id(id):
-    if id in sprites_memo:
-        return sprites_memo[id]
-
-    for sprite in sprites:
-        if sprite.id == id:
-            sprites_memo[id] = sprite
-            return sprite
-    
-    raise ValueError('no sprite exists for id = ' + str(id))
-
 def sprite_by_name(name):
-    if id in sprites_memo:
+    if name in sprites_memo:
         return sprites_memo[name]
 
     for sprite in sprites:
-        if sprite.name == name:
+        if sprite.name == name or sprite.id == name:
             sprites_memo[name] = sprite
             return sprite
-    
     raise ValueError('no sprite exists for name = ' + name)
-
-v_break = '|'
-hv_intersection = '.'
-
 
 class Board():
     
-    def __init__(self, iterable=None):
-        if not iterable:
-            iterable = map(lambda x: x.id, [sprite_by_name('empty_space')]*64) 
-        
+    def __init__(self, iterable):
         self.model = list(iterable)
         if len(self.model) != 64:
             raise ValueError(f"chess boards have 64 squares genius. {len(self.model)} != 64")
@@ -60,7 +41,7 @@ class Board():
     def __setitem__(self, key, newValue):
         if isinstance(key, str):
             _index = Board.toIndex(key)
-            self.model[_index] = newValue
+            self.model[_index] = sprite_by_name(newValue).id
 
     def __getitem__(self, key):
         if isinstance(key, str):
@@ -94,9 +75,9 @@ class BoardView():
             return iterable
         
     def __str__(self):
-        h_break = sprite_by_name('h_break')
-        empty_space = sprite_by_name('empty_space')
-        break_line = '  ' + '+'.join(['']+[f' {h_break.view} '] * 8 +['']) + '\n'
+        h_break = sprite_by_name('-').view
+        empty_space = sprite_by_name(' ').view
+        break_line = '  ' + '+'.join(['']+[f' {h_break} '] * 8 +['']) + '\n'
         view_ranks = []
         
         rank_range = self._flip(range(8))
@@ -104,11 +85,11 @@ class BoardView():
         
         for i in rank_range:
             spot_range = self._flip(self.board[(7-i)*8:(7-i)*8+8])
-            rank_items = map(lambda x: f' {sprite_by_id(x).view} ', spot_range)
+            rank_items = map(lambda x: f' {sprite_by_name(x).view} ', spot_range)
             view_ranks.append(f'{str(8-i)} ' + '|'.join(['',*rank_items,'']) + '\n')
 
         view = break_line.join(['', *view_ranks, ''])
-        view += f'   {empty_space.view}' + f'{empty_space.view}  '.join(file_range)
+        view += f'   {empty_space}' + f'{empty_space}  '.join(file_range)
         return view
 
 class BoardFactory():
@@ -121,33 +102,21 @@ class BoardFactory():
             return self.full()
 
         if spec.upper() == 'EMPTY':
-            return Board()
+            return self.empty()
         else:
             return self.full()
+    
+    def empty(self):
+        board = Board(map(lambda x: x.id, [sprite_by_name(' ')]*64))
+        return board
 
     def full(self):
         board = Board([
-            sprite_by_name('white_rook').id,
-            sprite_by_name('white_knight').id,
-            sprite_by_name('white_bishop').id,
-            sprite_by_name('white_queen').id,
-            sprite_by_name('white_king').id,
-            sprite_by_name('white_bishop').id,
-            sprite_by_name('white_knight').id,
-            sprite_by_name('white_rook').id,
-
-            *map(lambda x: x.id, [sprite_by_name('white_pawn')]*8),
-            *map(lambda x: x.id, [sprite_by_name('empty_space')]*32),
-            *map(lambda x: x.id, [sprite_by_name('black_pawn')]*8),
-            
-            sprite_by_name('black_rook').id,
-            sprite_by_name('black_knight').id,
-            sprite_by_name('black_bishop').id,
-            sprite_by_name('black_queen').id,
-            sprite_by_name('black_king').id,
-            sprite_by_name('black_bishop').id,
-            sprite_by_name('black_knight').id,
-            sprite_by_name('black_rook').id
+            'wR', 'wN', 'wB', 'wQ', 'wK', 'wB', 'wN', 'wR',
+            *(['w']*8),
+            *([' ']*32),
+            *(['b']*8),
+            'bR', 'bN', 'bB', 'bQ', 'bK', 'bB', 'bN', 'bR'
         ])
         return board
 
@@ -223,8 +192,8 @@ class Chess():
 
 def main(*args, **kwargs):
     board = BOARD_FACTORY.build('FULL')
-    board['e4'] = sprite_by_name('black_pawn').id
-    print(board['e4'])
+    board['e4'] = 'black_pawn'
+    board['e5'] = 'white_queen'
     print(BoardView(board))
 
 if __name__ == "__main__":
