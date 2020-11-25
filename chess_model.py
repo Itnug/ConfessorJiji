@@ -46,9 +46,87 @@ def sprite_by_name(name):
 v_break = '|'
 hv_intersection = '.'
 
+
 class Board():
-    def __init__(self):
-        self.board = [
+    
+    def __init__(self, iterable=None):
+        if not iterable:
+            iterable = map(lambda x: x.id, [sprite_by_name('empty_space')]*64) 
+        
+        self.model = list(iterable)
+        if len(self.model) != 64:
+            raise ValueError(f"chess boards have 64 squares genius. {len(self.model)} != 64")
+
+    def __setitem__(self, key, newValue):
+        if isinstance(key, str):
+            _index = Board.toIndex(key)
+            self.model[_index] = newValue
+
+    def __getitem__(self, key):
+        if isinstance(key, str):
+            _index = Board.toIndex(key)
+            return self.model[_index]
+
+        return self.model.__getitem__(key)
+
+    @staticmethod
+    def toIndex(a1h8):
+        """
+        convert a1 to 0, h8 to 63 and everything in between 
+        """
+        if a1h8[0].lower() not in 'abcdefgh' \
+                or a1h8[1] not in '12345678':
+            raise ValueError(f'invalid address: {a1h8}')
+
+        _file = 'abcdefgh'.index(a1h8[0].lower())
+        _rank = '12345678'.index(a1h8[1])
+        return _rank*8 + _file
+
+class BoardView():
+    def __init__(self, board):
+        self.board = board
+        self.isFlipped = False
+    
+    def _flip(self, iterable):
+        if self.isFlipped:
+            return reversed(iterable)
+        else: 
+            return iterable
+        
+    def __str__(self):
+        h_break = sprite_by_name('h_break')
+        empty_space = sprite_by_name('empty_space')
+        break_line = '  ' + '+'.join(['']+[f' {h_break.view} '] * 8 +['']) + '\n'
+        view_ranks = []
+        
+        rank_range = self._flip(range(8))
+        file_range = self._flip('ABCDEFGH') 
+        
+        for i in rank_range:
+            spot_range = self._flip(self.board[(7-i)*8:(7-i)*8+8])
+            rank_items = map(lambda x: f' {sprite_by_id(x).view} ', spot_range)
+            view_ranks.append(f'{str(8-i)} ' + '|'.join(['',*rank_items,'']) + '\n')
+
+        view = break_line.join(['', *view_ranks, ''])
+        view += f'   {empty_space.view}' + f'{empty_space.view}  '.join(file_range)
+        return view
+
+class BoardFactory():
+    
+    def __init(self):
+        pass
+    
+    def build(self, spec):
+        if not spec:
+            return self.full()
+
+        if spec.upper() == 'EMPTY':
+            return Board()
+        else:
+            return self.full()
+
+    def full(self):
+        board = Board([
             sprite_by_name('white_rook').id,
             sprite_by_name('white_knight').id,
             sprite_by_name('white_bishop').id,
@@ -70,31 +148,10 @@ class Board():
             sprite_by_name('black_bishop').id,
             sprite_by_name('black_knight').id,
             sprite_by_name('black_rook').id
-        ]
+        ])
+        return board
 
-        self.isFlipped = True
-    
-    def flip(self, iterable):
-        if self.isFlipped:
-            return reversed(iterable)
-        
-    def __str__(self):
-        h_break = sprite_by_name('h_break')
-        empty_space = sprite_by_name('empty_space')
-        break_line = '  ' + '+'.join(['']+[f' {h_break.view} '] * 8 +['']) + '\n'
-        view_ranks = []
-        
-        rank_range = self.flip(range(8))
-        file_range = self.flip('ABCDEFGH') 
-        
-        for i in rank_range:
-            spot_range = self.flip(self.board[(7-i)*8:(7-i)*8+8])
-            rank_items = map(lambda x: f' {sprite_by_id(x).view} ', spot_range)
-            view_ranks.append(f'{str(8-i)} ' + '|'.join(['',*rank_items,'']) + '\n')
-
-        view = break_line.join(['', *view_ranks, ''])
-        view += f'   {empty_space.view}' + f'{empty_space.view}  '.join(file_range)
-        return view
+BOARD_FACTORY = BoardFactory()
 
 InvalidPlayer = Exception('player is not current')
 InvalidMove = Exception('cannot parse move')
@@ -163,8 +220,12 @@ class Chess():
         else:
             self._current = 'white'
     
+
 def main(*args, **kwargs):
-    print(Board())
+    board = BOARD_FACTORY.build('FULL')
+    board['e4'] = sprite_by_name('black_pawn').id
+    print(board['e4'])
+    print(BoardView(board))
 
 if __name__ == "__main__":
     main()
