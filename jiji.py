@@ -1,32 +1,13 @@
 import os
-import discord
+import asyncio
+import chessbot, replybot
 
 from dotenv import load_dotenv
-from hardcoded_reply import HardCodedReply
-from magic_8ball import Magic8Ball
-from brookly99_quotes import B99Quotes
-from chess import Chess
+
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
-client = discord.Client()
 
-jiji_modules = [HardCodedReply(), Magic8Ball(), B99Quotes(), Chess()]
-
-@client.event
-async def on_ready():
-    print(f'{client.user} has connected to the Discord!')
-
-@client.event
-async def on_message(message):
-    if message.author.bot:
-        return
-
-    for jiji_module in jiji_modules:
-        print(type(jiji_module))
-        print(message.content)
-        reply = jiji_module.on_message(message)
-        
-        if reply:
-            await message.channel.send(reply)
-        
-client.run(TOKEN)
+loop = asyncio.get_event_loop()
+loop.create_task(chessbot.bot.start(TOKEN))
+loop.create_task(replybot.bot.start(TOKEN))
+loop.run_forever()
