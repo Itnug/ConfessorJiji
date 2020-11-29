@@ -1,9 +1,36 @@
+
 import re
 
 from discord.ext import commands
-from chess_model import BoardView, BOARD_FACTORY, sprite_by_name
 
 bot = commands.Bot(command_prefix='!')
+
+GAME = None
+
+def discord_view(board):
+    view = '\n'
+    br = '+'+'----+'*8
+    view += br + '\n'
+    for j in RANKS[::-1]:
+        line = '|'
+        offset = 0
+        for i in FILES:
+            position = i + j
+            if offset >= 1:
+                padding = ' '
+                offset -= 1
+            else:
+                padding = ''
+
+            if board[position]:
+                offset += 0.34
+                sprite = ' ' + board[position] + ' ' + padding
+            else:
+                sprite = '    ' + padding
+            line += sprite + '|'
+        view += line + '\n'
+        view += br + '\n'
+    return '```' + view + '```'
 
 _piece = '[KQBNR]'
 _check = '[+#]'
@@ -18,9 +45,6 @@ _castling  = 'O-O(?:-O)?'
 _notation = f'({_promotion}|{_castling}|{_pawnmove}|{_stdmove}){_check}?'
 notation = re.compile(_notation)
 
-#global variables
-CACHE = {}
-
 def get_user_from_mention(mention: str):
     if not mention: return
     if mention.startswith('<@') and mention.endswith('>'):
@@ -28,107 +52,50 @@ def get_user_from_mention(mention: str):
         if mention.startswith('!'):
             mention = mention[1:]
 
+@bot.command(name='e')
+async def test(ctx):
+    print(ctx.__dir__())
+
 @bot.event
 async def on_ready():
     print(f'chessbot is online')
 
 @bot.command(name='chess')
 async def chess(ctx, opponent):
-    global CACHE
-    if CACHE['GAME']:
+    global GAME
+    if GAME:
         await ctx.send('I can only run one game. use `!abort` or wait till the game is over')
         return
     white = str(ctx.author.id)
     black = re.sub('[<@!>]', '', opponent) 
-    CACHE['GAME'] = Chess(white=white, black=black)
+    GAME = Chess(white=white, black=black)
 
     await ctx.send(f"<@{white}>(white) vs <@{black}>(black).")
 
 @bot.command(name='abort')
 async def abort(ctx):
-    global CACHE
-    CACHE['GAME'] = None
+    global GAME
+    GAME = None
 
 @bot.command(name='move')
 async def move(ctx, move):
-    global CACHE
-    game = CACHE['GAME']
-    print(f'to play = {game.get_current_player()}')
+    global GAME
+    print(f'to play = {GAME.get_current_player()}')
     player = str(ctx.author.id)
-    if game.is_valid_player(player):
-        if game.is_valid_move(move):
+    if GAME.is_valid_player(player):
+        if GAME.is_valid_move(move):
             await ctx.send(f'ok <@{player}>.')
-            game.toggle_player()
+            GAME.toggle_player()
         else:
             await ctx.send(f'that is an illegal move. bruh...')
-        await ctx.send(f'now it is <@{game.get_current_player()}>\'s turn')
+        await ctx.send(f'now it is <@{GAME.get_current_player()}>\'s turn')
     else:
-        await ctx.send(f'invalid player. <@{ctx.author.id}> not same as <@{game.get_current_player()}>')
+        await ctx.send(f'invalid player. <@{ctx.author.id}> not same as <@{GAME.get_current_player()}>')
 
 @bot.command(name='whoseturn')
 async def whose_turn(ctx):
-    global CACHE
-    player = CACHE['GAME'].get_current_player()
-    await ctx.send(f'<@{player}>')
-
-async def create_board(ctx, init='FULL', name='DEFAULT'):
-    if name.lower() in ('active', 'create'):
-         await ctx.send(f'board name {name} is prohibited')
-         return
-
-    global CACHE
-    boards = CACHE.setdefault('BOARDS',{})
-    reply = ''
-
-    if name not in boards:
-        boards[name] = BOARD_FACTORY.build(init)
-    board = boards[name]
-    CACHE['ACTIVE_BOARD'] = name
-    reply += view_board(name, board)
-    await ctx.send(reply)
-
-@bot.command(name='placePieces')
-async def placePieces(ctx, placements):
-    global CACHE
-    name = CACHE.setdefault('ACTIVE_BOARD', 'DEFAULT')
-    boards = CACHE.setdefault('BOARDS',{})
-    if name not in boards:
-        boards[name] = BOARD_FACTORY.build('FULL') 
-    
-    board = boards[name]
-    reply = ''
-    for placement in placements.split(','):
-        place, piece = placement.split('=')
-        board[place] = piece
-    
-    reply += view_board(name, board)
-    await ctx.send(reply)
-
-def view_board(name, board):
-    view = BoardView(board)
-    return f'board[{name}]:\n```{view}```'
-
-@bot.command(name='board')
-async def board(ctx, *args):
-    global CACHE
-    boards = CACHE.setdefault('BOARDS',{})
-    if not args:
-        await ctx.send(f'boards list(in memory): {list(boards.keys())}')
-        return
-    if args[0].lower() == 'create':
-        await create_board(ctx, *args[1:])
-        return
-
-    name = args[0]
-    if name.upper() == 'ACTIVE':
-        name = CACHE['ACTIVE_BOARD']
-    if name in boards:
-        CACHE['ACTIVE_BOARD'] = name
-        board = boards[name]
-        reply = view_board(name, board)
-        await ctx.send(reply)
-    else:
-        await ctx.send(f'no board with name {name}')
+    global GAME
+    await ctx.send(f'<@{GAME.get_current_player()}>')
 
 class Chess():
 
@@ -157,7 +124,3 @@ class Chess():
             return True
         else:
             return False
-
-if __name__ == "__main__":
-    board = BOARD_FACTORY.build('FULL')
-    print(view_board('DEFAULT', board))
