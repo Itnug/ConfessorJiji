@@ -1,82 +1,25 @@
-import re
+from chess_model import BoardView, BOARD_FACTORY, sprite_by_name
 
-FILES = 'ABCDEFGH'
-RANKS = '12345678'
-
-_piece = '[KQBNR]'
-_check = '[+#]'
-_rank = '[1-8]'
-_file = '[a-h]'
-
-_promotion = f'x?{_file}[18]=(?!K){_piece}'
-_pawnmove = f'(?:{_file}?x)?{_file}(?![18]){_rank}'
-_stdmove = f'{_piece}{_file}?{_rank}?x?{_file}{_rank}'
-_castling = 'O-O(?:-O)?'
-
-_notation = f'({_promotion}|{_castling}|{_pawnmove}|{_stdmove}){_check}?'
-
-PIECES_IN_START_ORDER = ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
-
-
-PIECES = {
-    'white': {
-        'king': '♔',
-        'queen'	: '♕',
-        'rook': '♖',
-        'bishop': '♗',
-        'knight': '♘',
-        'pawn': '♙',
-    },
-    'black': {
-        'king': '♚',
-        'queen'	: '♛',
-        'rook': '♜',
-        'bishop': '♝',
-        'knight': '♞',
-        'pawn': '♟︎',
-    }
-}
-
-
-def make_board():
-    rows, cols = (8, 8)
-    board = [[None]*cols]*rows
-
-def build_view(board):
-    view = '\n'
-    br = '+'+'---+'*8
-    view += br + '\n'
-    for j in RANKS[::-1]:
-        line = '|'
-        for i in FILES:
-            position = i + j
-            if board[position]:
-                sprite = board[position]
+def white_pawn_move(board, move):
+    if len(move) == 2:
+        if board[move] != ' ':
+            return 'illegal move'
+        rank = int(move[1])
+        file = move[0]
+        if rank == 4:
+            if board[move.replace(str(rank), str(rank - 1))] == 'w':
+                pawn_position = move.replace(str(rank), str(rank - 1))
+                return 'pawn moved to ' + move + ' from ' + pawn_position
+            elif board[move.replace(str(rank), str(rank - 2))] == 'w' and board[move.replace(str(rank), str(rank - 1))] == ' ':
+                pawn_position = move.replace(str(rank), str(rank - 2))
+                return 'pawn moved to ' + move + ' from ' + pawn_position
             else:
-                sprite = ' '
-            line += ' ' + sprite + ' |'
-        view += line + '\n'
-        view += br + '\n'
-    return view
+                return 'illegal move'
+        else:
+            if board[move.replace(str(rank), str(rank - 1))] == 'w':
+                pawn_position = move.replace(str(rank), str(rank - 1))
+                return 'pawn moved to ' + move + ' from ' + pawn_position
 
-
-def is_piece_valid(move):
-    if(re.search(_piece, move[0]) or re.search(_file, move[0])):
-        return False
-    else:
-        return True
-
-
-def new_game():
-    board = make_board()
-    start_board(board)
-    return board
-
-
-if __name__ == '__main__':
-    board = new_game()
-    game_over = False
-    print(build_view(board))
-    while(not(game_over)):
-        move = input("Enter a valid move:")
-        game_over = is_piece_valid(move)
+if __name__ == "__main__":
+    board = BOARD_FACTORY.build('FULL')
+    print(white_pawn_move(board, 'e3'))
