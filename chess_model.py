@@ -1,3 +1,5 @@
+import re
+
 from collections import namedtuple
 
 Sprite = namedtuple('Sprite', ('name', 'id', 'view'))
@@ -19,6 +21,11 @@ sprites = [
     Sprite('h_break', '-', '〰'),
     Sprite('empty_space', ' ', '　') #unicode space - extra wide
 ]
+
+_piece = '[KQBNR]'
+_check = '[+#]'
+_rank = '[1-8]'
+_file = '[a-h]'
 
 sprites_memo = {}
 def sprite_by_name(name):
@@ -49,6 +56,9 @@ class Board():
             return self.model[_index]
 
         return self.model.__getitem__(key)
+
+    def __eq__(self, other):
+        return isinstance(other, Board) and list(self) == list(other)
 
     @staticmethod
     def toIndex(a1h8):
@@ -162,38 +172,106 @@ class Move():
             self.disambig_src = move
         else:
             return InvalidMove 
-         
-class Chess():
 
-    def __init__(self, whitePlayer, blackPlayer):
-        self.players = {
-            'white': whitePlayer,
-            'black': blackPlayer 
-        }
-        self.moves = []
-        self._current = 'white'
-
-    def update(self, player, move):
-        if self.current_player() != player:
-            return InvalidPlayer
-        move = Move(move)
-
-        self.toggle_player()
-
-    def current_player(self):
-        return self.players[self._current]
-
-    def toggle_player(self):
-        if self._current == 'white':
-            self._current = 'black'
-        else:
-            self._current = 'white'
+def is_pawn_move(move):
+    if re.match(f'(?:{_file}x)?{_file}{_rank}', move):
+        return True
+    return False
     
+class ChessEngine():
+
+    def __init__(self, board, white_to_play=True):
+        self.board = board
+        self.white_to_play = white_to_play
+        self.moves = []
+        self.view = BoardView(self.board)
+        
+    def move(self, move):
+        # update logic here
+        done = False
+        if not done:
+            done = self._pawn_move(move)
+        if not done:
+            done = self._knight_move(move)
+        if not done:
+            done = self._bishop_move(move)
+        if not done:
+            done = self._rook_move(move)
+        if not done:
+            done = self._queen_move(move)
+        if not done:
+            done = self._king_move(move)
+        
+        self.white_to_play = not self.white_to_play
+
+    def _pawn_move(self, move):
+        if self.white_to_play:
+            return self._white_pawn_move(move)
+        else:
+            return self._black_pawn_move(move)
+
+    def _knight_move(self, move):
+        return False
+
+    def _bishop_move(self, move):
+        return False
+
+    def _rook_move(self, move):
+        return False
+
+    def _queen_move(self, move):
+        return False
+
+    def _king_move(self, move):
+        return False 
+
+    def _white_pawn_move(self, move):
+        if len(move) == 2:
+            if self.board[move] != ' ':
+                return False
+            rank = int(move[-1])
+            done = self._move_white_pawn_one_rank(move, rank)
+            if not(done) and rank == 4:
+                done = self._move_white_pawn_two_ranks(move, rank)            
+            return done
+        else:
+            return False
+
+    def _move_white_pawn_two_ranks(self, move, rank):
+        if self.board[move.replace(str(rank), str(rank - 2))] != 'w' \
+                or self.board[move.replace(str(rank), str(rank - 1))] != ' ' \
+                or rank != 4:
+            return False
+        
+        pawn_position = move.replace(str(rank), str(rank - 2))
+        return self._update_board(move, pawn_position, move)
+
+    def _move_white_pawn_one_rank(self, move, rank):
+        if self.board[move.replace(str(rank), str(rank - 1))] != 'w':
+            return False
+
+        pawn_position = move.replace(str(rank), str(rank - 1))
+        return self._update_board(move, pawn_position, move)
+        
+    def _update_board(self, move, old, new):
+        self.board[new] = self.board[old]
+        self.board[old] = ' '
+        self.moves.append(move)
+        return True
+    
+    def _black_pawn_move(self, move):
+        return False
+
+    def __str__(self):
+        self.view.isFlipped = not self.white_to_play
+        return str(self.view)
 
 def main(*args, **kwargs):
-    board = BOARD_FACTORY.build('FULL')
-    board['e4'] = 'black_pawn'
-    board['e5'] = 'white_queen'
+    board = BOARD_FACTORY.build('EMPTY')
+    board['a2'] = 'w'
+    chess = ChessEngine(board)
+    print(chess)
+    chess.move('a3')
     print(BoardView(board))
 
 if __name__ == "__main__":
